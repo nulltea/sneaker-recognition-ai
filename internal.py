@@ -1,6 +1,7 @@
 import os;
 import urllib.request;
 from console_progressbar import ProgressBar;
+from data_transform import *;
 
 DIR = "Dataset/";
 
@@ -20,6 +21,7 @@ if __name__ == "__main__":
 					progress.print_progress_bar(i);
 					image = "Dataset/images/Nike_AirMax720_{}.jpg".format(i);
 					if not os.path.exists(image):
-						try: urllib.request.urlretrieve(url, "Dataset/images/{0}_{1}.jpg".format(sneaker_model, i));
+						try: urllib.request.urlretrieve(url, "Dataset/originals/{0}_{1}.jpg".format(sneaker_model, i));
 						except: continue;
 	input();
+	DataTransform.resize_multiple_images("Dataset\originals", "Dataset\images")
