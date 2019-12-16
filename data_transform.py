@@ -12,13 +12,16 @@ class DataTransform():
 		index = 0;
 		for i, filename in enumerate(os.listdir(src_path)):
 			progress.print_progress_bar(i);
+			model_list = filename.split("_");
+			model_dir = os.path.join(dst_path, model_list[0], model_list[1]);
+			if not os.path.exists(model_dir):
+				os.makedirs(model_dir);
 			try:
-				img=Image.open(src_path+'\\'+filename)
-				new_img = img.resize((128,128))
+				img=Image.open(os.path.join(src_path, filename));
+				new_img = img.resize((128,128));
 				if not os.path.exists(dst_path):
 					os.makedirs(dst_path)
-				new_img.save(dst_path+'\\'+filename)
-				index += 1;
+				new_img.save(os.path.join(model_dir, filename));
 			except:
 				continue
 DataTransform.resize_multiple_images("Dataset\originals", "Dataset\images")
