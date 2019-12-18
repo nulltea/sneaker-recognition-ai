@@ -7,7 +7,8 @@ import numpy as np;
 import matplotlib.pyplot as plt;
 from PIL import Image;
 from torch.utils.data import Dataset;
-from torchvision import transforms, utils
+from torchvision import transforms, utils;
+from config import *;
 
 class SneakersDataset(Dataset):
 	"""Sneakers dataset."""
@@ -39,5 +40,6 @@ from config import *;
 if __name__ == "__main__":
 	dataset = SneakersDataset(IMG_DIR, MODELS);
 	for i in range(10):
-		print(dataset[0]);
+		arr, label = dataset[0]
+		print(arr.size());
 	input();

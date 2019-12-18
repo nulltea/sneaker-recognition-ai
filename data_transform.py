@@ -46,6 +46,8 @@ def images_to_array(img_dir_path, labels):
 		model_index = labels.index(model);
 		for img in os.listdir(path):
 			img_array = cv2.imread(os.path.join(path, img), cv2.IMREAD_GRAYSCALE);
+			if img_array is None:
+				continue;
 			dataset.append((img_array, model_index));
 	random.shuffle(dataset);
 	return dataset;
