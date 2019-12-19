@@ -1,5 +1,7 @@
 import os;
 import urllib.request;
+import requests;
+import mimetypes;
 from console_progressbar import ProgressBar;
 from data_transform import *;
 from config import *;
@@ -10,7 +12,8 @@ def download_images():
 			sneaker_model_names = os.path.splitext(filename)[0].split('_');
 			sneaker_brand = sneaker_model_names[0];
 			sneaker_model = sneaker_model_names[1];
-			with open("Dataset/{}".format(filename), 'r') as file:
+			model_dir = os.path.join(ORIG_IMG_DIR, sneaker_brand, sneaker_model);
+			with open(os.path.join(DATA_DIR, filename), 'r') as file:
 				total = len(file.readlines());
 				file.seek(0);
 				url = file.readline()
@@ -18,14 +21,24 @@ def download_images():
 				i = 0;
 				while url:
 					url = file.readline();
-					i += 1;
-					progress.print_progress_bar(i);
-					image_path = os.path.join(ORIG_IMG_DIR, "{0}_{1}_{2}.jpeg".format(sneaker_brand, sneaker_model, i));
+					image_path = os.path.join(model_dir, "{0}_{1}_{2}.jpg".format(sneaker_brand, sneaker_model, i));
+					if not os.path.exists(model_dir):
+						os.makedirs(model_dir);
 					if not os.path.exists(image_path):
 						try: urllib.request.urlretrieve(url, image_path);
 						except: continue;
+					progress.print_progress_bar(i);
+					i += 1;
+					print(i)
+					if i == 300:
+						break;
+		print("\n");
+
+def get_url_extension(url):
+	response = requests.get(url)
+	content_type = response.headers['content-type']
+	return mimetypes.guess_extension(content_type)
 
 if __name__ == "__main__":
 	download_images();
-	input();
 	resize_multiple_images(ORIG_IMG_DIR, IMG_DIR)

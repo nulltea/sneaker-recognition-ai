@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from dataset import *;
+from torch.utils.tensorboard import SummaryWriter;
 from console_progressbar import ProgressBar;
 from config import *;
 
@@ -23,6 +24,9 @@ class Net(nn.Module):
 		self.fc2 = nn.Linear(120, 84)			#hidden
 		self.fc3 = nn.Linear(84, 10)			#output
 
+		#TensorBoard Writter
+		self.tensorboard = SummaryWriter('runs/sneaker_net_test');
+
 
 
 	def forward(self, x):
@@ -35,11 +39,13 @@ class Net(nn.Module):
 		return x;
 
 	def train(self, data_set):
-		data_loader = torch.utils.data.DataLoader(data_set, batch_size=2, num_workers=0, shuffle=True, pin_memory=False)
+		data_loader = torch.utils.data.DataLoader(data_set, batch_size=1, num_workers=0, shuffle=True, pin_memory=False)
+		self.tensorboard.add_graph(self, data_loader);
 		criterion = nn.CrossEntropyLoss()
 		optimizer = optim.SGD(self.parameters(), lr=0.001, momentum=0.9)
 		for epoch in range(2):  # loop over the dataset multiple times
 			running_loss = 0.0;
+			total_loss = 0.0;
 			train_list = enumerate(data_loader, 0);
 			progress = ProgressBar(total=100, prefix='Here', suffix='Now', decimals=3, length=50, fill='X', zfill='-')
 			epoch_index = 0;
@@ -59,10 +65,17 @@ class Net(nn.Module):
 
 				# print statistics
 				running_loss += loss.item()
+				total_loss += loss.item();
 				if i % 100 == 99:    # print every 2000 mini-batches
 					print('\t[%d, %5d] loss: %.3f' %(epoch + 1, i + 1, running_loss / 100))
 					running_loss = 0.0
 					epoch_index += 1;
+			self.tensorboard.add_scalar("Loss", total_loss, epoch);
+
+			self.tensorboard.add_histogram("conv1.bias", self.conv1.bias, epoch);
+			self.tensorboard.add_histogram("conv1.weight", self.conv1.weight, epoch);
+			self.tensorboard.add_histogram("conv1.weight.grad", self.conv1.weight.grad, epoch);
+		self.tensorboard.close();
 		print('\nFinished Training')
 		torch.save(self.state_dict(), self.model_save_path) #save model
 

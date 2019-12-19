@@ -36,10 +36,34 @@ class SneakersDataset(Dataset):
 				transform(img_as_tensor);
 		return (img_as_tensor, label);
 
-from config import *;
+def select_n_random(dataset, n=100):
+	perm = torch.randperm(len(dataset))
+	return [img for img,_ in dataset[perm][:n]], [label for _,label in dataset[perm][:n]];
+
+
 if __name__ == "__main__":
+	from config import *;
+	from torch.utils.tensorboard import SummaryWriter
+	writer = SummaryWriter('runs/sneaker_net_test')
 	dataset = SneakersDataset(IMG_DIR, MODELS);
-	for i in range(10):
+
+	# select random images and their target indices
+	images, labels = select_n_random(dataset)
+
+	# get the class labels for each image
+	class_labels = [MODELS[lab] for lab in labels]
+
+	# log embeddings
+	features = images.view(-1, 28 * 28)
+	writer.add_embedding(features,
+						metadata=class_labels,
+						label_img=images.unsqueeze(1))
+	writer.close()
+
+	for i in range(20):
 		arr, label = dataset[0]
-		print(arr.size());
+		img_grid = utils.make_grid(arr)
+		# write to tensorboard
+		writer.add_image('sneaker_net_img', img_grid);
 	input();
+	writer.close();

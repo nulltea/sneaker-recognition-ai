@@ -1,5 +1,5 @@
 #
-MODELS = ['AirMax720', 'AirMax720', 'AirMax95', 'AirForce1', 'Jordan', 'React', 'VaporMax'];
+MODELS = ['AirMax720', 'AirMax95', 'AirForce1', 'React'];
 #
 DATA_DIR = "Data\\";
 #
