@@ -6,6 +6,7 @@ import numpy as np;
 import matplotlib.pyplot as plt;
 from PIL import Image;
 from console_progressbar import ProgressBar;
+from torchvision import transforms, utils;
 
 def resize_multiple_images(src_path, dst_path):
 	"""
@@ -23,10 +24,9 @@ def resize_multiple_images(src_path, dst_path):
 					if not os.path.exists(model_to_dir):
 						os.makedirs(model_to_dir);
 					total = len(os.listdir(model_from_dir))
-					progress = ProgressBar(total=total, prefix=model, suffix='Done', decimals=3, length=50, fill='X', zfill='-');
+					progress = ProgressBar(total=total, prefix=model, suffix='Done', decimals=3, length=50, fill='\u2588', zfill='-');
 					for i, filename in enumerate(os.listdir(model_from_dir)):
 						progress.print_progress_bar(i);
-						
 						try:
 							img=Image.open(os.path.join(src_path, brand, model, filename));
 							new_img = img.resize((128,128));
@@ -37,6 +37,12 @@ def resize_multiple_images(src_path, dst_path):
 							continue
 				print("\n");
 
+def resize_image(img_name):
+	try:
+		img=Image.open(img_name);
+		new_img = img.resize((128,128));
+		return new_img;
+	except: return None;
 
 def images_to_array(img_dir_path, labels):
 	"""
@@ -49,16 +55,27 @@ def images_to_array(img_dir_path, labels):
 	for model in labels:
 		path = os.path.join(img_dir_path, model);
 		model_index = labels.index(model);
-		for img in os.listdir(path):
-			img_array = cv2.imread(os.path.join(path, img), cv2.IMREAD_GRAYSCALE);
+		for img_name in os.listdir(path):
+			try :
+				img = Image.open(os.path.join(path, img_name));
+			except:
+				continue;
+			img_array = np.array(img); #cv2.imread(os.path.join(path, img_name), cv2.IMREAD_GRAYSCALE);
 			if img_array is None:
 				continue;
 			dataset.append((img_array, model_index));
 	random.shuffle(dataset);
 	return dataset;
 
-
+def image_tranform_to_tensor(image_name):
+	img = resize_image(image_name);
+	if not img:
+		return None;
+	np_array = np.array(img);
+	img_array = cv2.cvtColor(np_array, cv2.IMREAD_GRAYSCALE);
+	to_tensor = transforms.ToTensor();
+	return to_tensor(np_array);
 
 if __name__ == "__main__":
 	from config import *;
-	resize_multiple_images(ORIG_IMG_DIR, IMG_DIR)
+	resize_multiple_images(ORIG_IMG_DIR, IMG_DIR);

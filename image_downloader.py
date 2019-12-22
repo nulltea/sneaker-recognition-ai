@@ -17,7 +17,7 @@ def download_images():
 				total = len(file.readlines());
 				file.seek(0);
 				url = file.readline()
-				progress = ProgressBar(total=total, prefix=sneaker_brand, suffix=sneaker_model, decimals=3, length=50, fill='X', zfill='-');
+				progress = ProgressBar(total=total, prefix=sneaker_brand, suffix=sneaker_model, decimals=3, length=50, fill='\u2588', zfill='-');
 				i = 0;
 				while url:
 					url = file.readline();

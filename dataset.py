@@ -16,7 +16,7 @@ class SneakersDataset(Dataset):
 		"""
 		Args:
 			img_dir (string): Directory with all the images.
-			transforms ([callable], optional): Optional transform to be applied
+			transform_functions ([callable], optional): Optional transform to be applied
 				on a sample.
 		"""
 		self.img_dir = img_dir
