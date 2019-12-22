@@ -2,6 +2,7 @@ import os;
 import cv2;
 import json;
 import random;
+import service;
 import numpy as np;
 import matplotlib.pyplot as plt;
 from PIL import Image;
@@ -52,6 +53,12 @@ def images_to_array(img_dir_path, labels):
 		Return ([([int, int], int)]): Data set of numpy image array and label index num.
 	"""
 	dataset = [];
+	preprocess = transforms.Compose([
+		transforms.Resize(256),
+		transforms.CenterCrop(256),
+		transforms.ToTensor(),
+		transforms.Normalize(mean=[0.4, 0.4, 0.4], std=[0.2, 0.2, 0.2]),
+	])
 	for model in labels:
 		path = os.path.join(img_dir_path, model);
 		model_index = labels.index(model);
@@ -60,10 +67,11 @@ def images_to_array(img_dir_path, labels):
 				img = Image.open(os.path.join(path, img_name));
 			except:
 				continue;
-			img_array = np.array(img); #cv2.imread(os.path.join(path, img_name), cv2.IMREAD_GRAYSCALE);
-			if img_array is None:
+			#img_tensor = preprocess(img);
+			img_tensor = np.array(img); #cv2.imread(os.path.join(path, img_name), cv2.IMREAD_GRAYSCALE);
+			if img_tensor is None:
 				continue;
-			dataset.append((img_array, model_index));
+			dataset.append((img_tensor, model_index));
 	random.shuffle(dataset);
 	return dataset;
 
@@ -78,4 +86,5 @@ def image_tranform_to_tensor(image_name):
 
 if __name__ == "__main__":
 	from config import *;
-	resize_multiple_images(ORIG_IMG_DIR, IMG_DIR);
+	#resize_multiple_images(ORIG_IMG_DIR, IMG_DIR);
+	images_to_array(os.path.join(ORIG_IMG_DIR, "Nike"), MODELS);

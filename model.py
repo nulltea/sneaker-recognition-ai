@@ -14,25 +14,27 @@ class Net(nn.Module):
 		self.model_save_path = model_save_path;
 
 		#Convolutional layers
-		self.conv1 = nn.Conv2d(3, 6, 5)
-		self.conv2 = nn.Conv2d(6, 16, 5)
-		self.conv3 = nn.Conv2d(16, 32, 5)
+		self.conv1 = nn.Conv2d(3, 6, 6)
+		self.conv2 = nn.Conv2d(6, 16, 6)
+		self.conv3 = nn.Conv2d(16, 32, 6)
+		#self.conv4 = nn.Conv2d(32, 64, 5)
 
 		self.pool = nn.MaxPool2d(2, 2)
 
 		#Layers
-		self.fc1 = nn.Linear(32 * 12 * 12, 120)	#input
+		self.fc1 = nn.Linear(32 * 11 * 11, 120)	#input
 		self.fc2 = nn.Linear(120, 84)			#hidden
 		self.fc3 = nn.Linear(84, 10)			#output
 		
 		#TensorBoard Writter
-		self.tensorboard = SummaryWriter('runs/sneaker_net_test');
+		self.tensorboard = SummaryWriter('runs/sneaker_net');
 
 	def forward(self, x):
 		x = self.pool(F.relu(self.conv1(x)));
 		x = self.pool(F.relu(self.conv2(x)));
 		x = self.pool(F.relu(self.conv3(x)));
-		x = x.view(-1, 32 * 12 * 12);
+		s = x.size();
+		x = x.view(-1, 32 * 11 * 11);
 		x = F.relu(self.fc1(x));
 		x = F.relu(self.fc2(x));
 		x = self.fc3(x);
@@ -46,7 +48,7 @@ class Net(nn.Module):
 		optimizer = optim.SGD(self.parameters(), lr=0.001, momentum=0.9)
 		
 		sub_epoch = 0;
-		for epoch in range(2):  # loop over the dataset multiple times
+		for epoch in range(20):  # loop over the dataset multiple times
 			running_loss = 0.0;
 			total_loss = 0.0;
 			running_correct = 0.0;
@@ -77,7 +79,7 @@ class Net(nn.Module):
 				total_correct += self.__get_correct_total(outputs, labels);
 
 				if i % batch_size == batch_size - 1:
-					print('\t[%d, %5d] loss: %.3f' %(epoch + 1, i + 1, running_loss / batch_size))
+					print('\t[%d, %5d] loss: %.3f correct: %5d' %(epoch + 1, i + 1, running_loss / batch_size, running_correct))
 					self.tensorboard.add_scalar("Loss", running_loss, sub_epoch);
 					self.tensorboard.add_scalar("Correct", running_correct, sub_epoch);
 					self.tensorboard.add_scalar("Accuracy", running_correct / batch_size, sub_epoch);
@@ -106,7 +108,7 @@ class Net(nn.Module):
 if __name__ == "__main__":
 	dataset = SneakersDataset(IMG_DIR, MODELS);
 	net = Net(MODEL_SAVE_PATH);
-	#net.load_model();
+	net.load_model();
 	print("Init training protocol? (y/n)");
 	if input() == "y":
 		net.train(data_set=dataset);

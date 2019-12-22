@@ -27,9 +27,8 @@ def download_images():
 					if not os.path.exists(image_path):
 						try: urllib.request.urlretrieve(url, image_path);
 						except: continue;
-					progress.print_progress_bar(i);
 					i += 1;
-					print(i)
+					progress.print_progress_bar(i);
 					if i == 300:
 						break;
 		print("\n");
@@ -41,4 +40,3 @@ def get_url_extension(url):
 
 if __name__ == "__main__":
 	download_images();
-	resize_multiple_images(ORIG_IMG_DIR, IMG_DIR)

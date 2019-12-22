@@ -1,5 +1,5 @@
 #Sneaker model categories
-MODELS = ['AirMax720', 'AirMax95', 'AirForce1', 'React'];
+MODELS = ["AirMax720", "AirMax270", "AirMax95", "AirForce1", "React", "Jordan", "VaporMax"];
 #Data directory path
 DATA_DIR = "Data\\";
 #Dataset images directory path
