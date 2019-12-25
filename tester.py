@@ -28,7 +28,7 @@ def get_activation(name):
 tensorboard = SummaryWriter('runs/sneaker_net');
 net = Net(MODEL_SAVE_PATH);
 net.load_model();
-net.conv1.register_forward_hook(get_activation('conv1'))
+net.conv_layers[0].register_forward_hook(get_activation('conv'))
 
 batch_size = 4;
 conv_count = 4;
@@ -58,8 +58,12 @@ plt.show()
 j = 0
 f,axarr  = plt.subplots(batch_size, conv_count, figsize=(8, 6))
 for layer in range(conv_count):
-	convx = "conv1"
+	convx = "conv"
 	act = activation[convx].squeeze();
 	for img in range(batch_size):
 		axarr[img, layer].imshow(act[img][layer]);
 plt.show()
+
+#TODO make gui or io.web app
+# use image transform visualization as loading...
+#

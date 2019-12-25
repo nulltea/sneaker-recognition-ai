@@ -15,7 +15,6 @@ def resize_multiple_images(src_path, dst_path):
 			src_path (string): location where images are saved.
 			src_path (string): location where images will be saved.
 	"""
-	# Here src_path is the location where images are saved.
 	for subdir, brands, _ in os.walk(src_path):
 		for brand in brands:
 			for subdir, models, _ in os.walk(os.path.join(subdir, brand)):
@@ -54,20 +53,25 @@ def images_to_array(img_dir_path, labels):
 	"""
 	dataset = [];
 	preprocess = transforms.Compose([
-		transforms.Resize(256),
-		transforms.CenterCrop(256),
+		transforms.Resize(224),
+		transforms.CenterCrop(224),
 		transforms.ToTensor(),
-		transforms.Normalize(mean=[0.4, 0.4, 0.4], std=[0.2, 0.2, 0.2]),
+		#transforms.Normalize(mean=[0.4, 0.4, 0.4], std=[0.2, 0.2, 0.2]),
 	])
 	for model in labels:
 		path = os.path.join(img_dir_path, model);
 		model_index = labels.index(model);
-		for img_name in os.listdir(path):
+		total = len(os.listdir(path))
+		progress = ProgressBar(total=total, prefix="Preparing data", suffix=model, decimals=3, length=50, fill='\u2588', zfill='-');
+		for i, img_name in enumerate(os.listdir(path)):
+			progress.print_progress_bar(i);
 			try :
 				img = Image.open(os.path.join(path, img_name));
 			except:
 				continue;
+			#img = img.convert('RGB');
 			#img_tensor = preprocess(img);
+			#service.img_show(img_tensor);
 			img_tensor = np.array(img); #cv2.imread(os.path.join(path, img_name), cv2.IMREAD_GRAYSCALE);
 			if img_tensor is None:
 				continue;
@@ -86,5 +90,5 @@ def image_tranform_to_tensor(image_name):
 
 if __name__ == "__main__":
 	from config import *;
-	#resize_multiple_images(ORIG_IMG_DIR, IMG_DIR);
+	resize_multiple_images(ORIG_IMG_DIR, IMG_DIR);
 	images_to_array(os.path.join(ORIG_IMG_DIR, "Nike"), MODELS);

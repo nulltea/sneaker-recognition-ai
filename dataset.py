@@ -30,11 +30,11 @@ class SneakersDataset(Dataset):
 
 	def __getitem__(self, index):
 		image, label = self.image_arr[index];
-		img_as_tensor = self.to_tensor(image);
+		image = self.to_tensor(image);
 		if self.transform_functions and any(self.transform_functions):
 			for transform in self.transform:
-				transform(img_as_tensor);
-		return (img_as_tensor, label);
+				transform(image);
+		return (image, label);
 
 def select_n_random(dataset, n=100):
 	perm = torch.randperm(len(dataset))

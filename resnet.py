@@ -1,3 +1,4 @@
+
 import torchvision;
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,17 +12,37 @@ from config import *;
 USE_GPU = False;
 EPOCHS = 20;
 
+class Conv2dAuto(nn.Conv2d):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.padding =  (self.kernel_size[0] // 2, self.kernel_size[1] // 2) # dynamic add padding based on the kernel_size
+
+def activation_func(activation):
+	return  nn.ModuleDict([
+		['relu', nn.ReLU(inplace=True)],
+		['leaky_relu', nn.LeakyReLU(negative_slope=0.01, inplace=True)],
+		['selu', nn.SELU(inplace=True)],
+		['none', nn.Identity()]
+	])[activation]
+
 class Net(nn.Module):
 	def __init__(self, model_save_path = None):
 		super(Net, self).__init__()
 		self.model_save_path = model_save_path;
 
-		#Convolutional layers
-		self.conv_layers = nn.Sequential(
-			nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5),
-			nn.MaxPool2d(kernel_size=2, stride=2),
+		self.init_conv = nn.Sequential(
+			nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7),
+			nn.BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
 			nn.ReLU(),
-			nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5),
+			nn.MaxPool2d(kernel_size=3, stride=2)
+		)
+
+		#Convolutional layers
+		self.conv_layer1 = nn.Sequential(
+			nn.Conv2d(in_channels=3, out_channels=8, kernel_size=5),
+			nn.BatchNorm2d(kernel_size=2, stride=2),
+			nn.ReLU(),
+			nn.Conv2d(in_channels=8, out_channels=16, kernel_size=5),
 			nn.MaxPool2d(kernel_size=2, stride=2),
 			nn.ReLU(),
 			nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5),
@@ -31,7 +52,7 @@ class Net(nn.Module):
 
 		#Linear layers
 		self.linear_layers = nn.Sequential(
-			nn.Linear(32 * 12 * 12, 120),		#input
+			nn.Linear(64 * 10 * 10, 120),		#input
 			nn.ReLU(),
 			nn.Linear(120, 84),					#hidden
 			nn.ReLU(),
@@ -42,7 +63,7 @@ class Net(nn.Module):
 
 	def forward(self, input):
 		input = self.conv_layers(input);
-		input = input.view(-1, 32 * 12 * 12);
+		input = input.view(-1, 64 * 10 * 10);
 		input = self.linear_layers(input);
 		return input;
 
@@ -115,7 +136,7 @@ class Net(nn.Module):
 if __name__ == "__main__":
 	dataset = SneakersDataset(os.path.join(IMG_DIR, "Nike"), MODELS);
 	net = Net(MODEL_SAVE_PATH);
-	net.load_model();
+	#net.load_model();
 	print("\nInit training protocol? (y/n)");
 	if input() == "y":
 		net.train(data_set=dataset);
