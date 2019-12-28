@@ -1,142 +1,92 @@
-
-import torchvision;
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import service;
-from dataset import *;
-from torch.utils.tensorboard import SummaryWriter;
-from console_progressbar import ProgressBar;
-from config import *;
+import torchvision
+from console_progressbar import ProgressBar
+from torch.utils.tensorboard import SummaryWriter
 
-USE_GPU = False;
-EPOCHS = 20;
+import service
+from config import *
+from dataset import *
+from resnet_serv import *
 
-class Conv2dAuto(nn.Conv2d):
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-		self.padding =  (self.kernel_size[0] // 2, self.kernel_size[1] // 2) # dynamic add padding based on the kernel_size
 
-def activation_func(activation):
-	return  nn.ModuleDict([
-		['relu', nn.ReLU(inplace=True)],
-		['leaky_relu', nn.LeakyReLU(negative_slope=0.01, inplace=True)],
-		['selu', nn.SELU(inplace=True)],
-		['none', nn.Identity()]
-	])[activation]
+class ResNetEncoder(nn.Module):
+	"""
+	ResNet encoder composed by increasing different layers with increasing features.
+	"""
 
-class Net(nn.Module):
-	def __init__(self, model_save_path = None):
-		super(Net, self).__init__()
-		self.model_save_path = model_save_path;
+	def __init__(self, in_channels=3, blocks_sizes=[64, 128, 256, 512], deepths=[2, 2, 2, 2],
+				activation='relu', block=ResNetBasicBlock, *args, **kwargs):
+		super().__init__();
 
-		self.init_conv = nn.Sequential(
-			nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7),
-			nn.BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
-			nn.ReLU(),
-			nn.MaxPool2d(kernel_size=3, stride=2)
-		)
-
-		#Convolutional layers
-		self.conv_layer1 = nn.Sequential(
-			nn.Conv2d(in_channels=3, out_channels=8, kernel_size=5),
-			nn.BatchNorm2d(kernel_size=2, stride=2),
-			nn.ReLU(),
-			nn.Conv2d(in_channels=8, out_channels=16, kernel_size=5),
-			nn.MaxPool2d(kernel_size=2, stride=2),
-			nn.ReLU(),
-			nn.Conv2d(in_channels=16, out_channels=32, kernel_size=5),
-			nn.MaxPool2d(kernel_size=2, stride=2),
-			nn.ReLU(),
+		self.blocks_sizes = blocks_sizes;
+		self.gate = nn.Sequential(
+			nn.Conv2d(in_channels, self.blocks_sizes[0], kernel_size=7, stride=2, padding=3, bias=False),
+			nn.BatchNorm2d(self.blocks_sizes[0]),
+			activation_func(activation),
+			nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 		);
 
-		#Linear layers
-		self.linear_layers = nn.Sequential(
-			nn.Linear(64 * 10 * 10, 120),		#input
-			nn.ReLU(),
-			nn.Linear(120, 84),					#hidden
-			nn.ReLU(),
-			nn.Linear(84, 7),					#output
-		)
-		#TensorBoard Writter
-		self.tensorboard = SummaryWriter('runs/sneaker_net');
+		self.in_out_block_sizes = list(zip(blocks_sizes, blocks_sizes[1:]));
+		self.blocks = nn.ModuleList([
+			ResNetLayer(blocks_sizes[0], blocks_sizes[0], n=deepths[0], activation=activation, block=block, *args, **kwargs),
+			*[ResNetLayer(in_channels * block.expansion, out_channels, n=n, activation=activation, block=block, *args, **kwargs)
+			for (in_channels, out_channels), n in zip(self.in_out_block_sizes, deepths[1:])]
+		]);
 
-	def forward(self, input):
-		input = self.conv_layers(input);
-		input = input.view(-1, 64 * 10 * 10);
-		input = self.linear_layers(input);
-		return input;
+	def forward(self, x):
+		x = self.gate(x);
+		for block in self.blocks:
+			x = block(x);
+		return x
 
 
-	def train(self, data_set):
-		data_loader = torch.utils.data.DataLoader(data_set, batch_size=4, num_workers=0, shuffle=True);
-		
-		if USE_GPU:
-			self.cuda();
+class ResnetDecoder(nn.Module):
+	"""
+	This class represents the tail of ResNet. It performs a global pooling and maps the output to the
+	correct class by using a fully connected layer.
+	"""
 
-		criterion = nn.CrossEntropyLoss()
-		optimizer = optim.Adam(self.parameters(), lr=1e-3)
-		
-		sub_epoch = 0;
-		for epoch in range(EPOCHS):
-			running_loss = 0.0;
-			total_loss = 0.0;
-			running_correct = 0.0;
-			total_correct = 0.0;
-			train_list = enumerate(data_loader, 0);
-			batch_size = 100;
-			progress = ProgressBar(total=batch_size, prefix='Here', suffix='Now', decimals=3, length=50, fill='\u2588', zfill=' ')
-			batch_index = 0;
-			
-			for i, data in train_list:
-				progress.print_progress_bar(i - batch_index * batch_size);
-				# get the inputs; data is a list of [inputs, labels]
-				inputs, labels = data;
+	def __init__(self, in_features, n_classes):
+		super().__init__()
+		self.avg = nn.AdaptiveAvgPool2d((1, 1))
+		self.decoder = nn.Linear(in_features, n_classes)
 
-				if USE_GPU:
-					inputs = inputs.cuda();
-					labels = labels.cuda();
+	def forward(self, x):
+		x = self.avg(x)
+		x = x.view(x.size(0), -1)
+		x = self.decoder(x)
+		return x
 
-				# zero the parameter gradients
-				optimizer.zero_grad()
 
-				# forward + backward + optimize
-				outputs = self(inputs)
-				loss = criterion(outputs, labels)
-				loss.backward()
-				optimizer.step()
+class ResNet(nn.Module):
+	def __init__(self, in_channels, n_classes, *args, **kwargs):
+		super().__init__();
+		self.encoder = ResNetEncoder(in_channels, *args, **kwargs);
+		self.decoder = ResnetDecoder(self.encoder.blocks[-1].blocks[-1].expanded_channels, n_classes);
 
-				# statistics
-				running_loss += loss.item();
-				running_correct += self.__get_correct_total(outputs, labels);
-				total_loss += loss.item();
-				total_correct += self.__get_correct_total(outputs, labels);
+	def forward(self, x):
+		x = self.encoder(x);
+		x = self.decoder(x);
+		return x;
 
-				if i % batch_size == batch_size - 1:
-					print('\t[%d, %5d] loss: %.3f correct: %5d' %(epoch + 1, i + 1, running_loss / batch_size, running_correct))
-					self.tensorboard.add_scalar("Loss", running_loss, sub_epoch);
-					self.tensorboard.add_scalar("Correct", running_correct, sub_epoch);
-					self.tensorboard.add_scalar("Accuracy", running_correct / batch_size, sub_epoch);
-					running_loss = 0.0;
-					running_correct = 0.0;
-					batch_index += 1;
-					sub_epoch += 1;
 
-		self.tensorboard.close();
-		print('\nFinished Training')
-		if self.model_save_path:
-			torch.save(self.state_dict(), self.model_save_path) #save model
+def resnet18(in_channels, n_classes):
+	return ResNet(in_channels, n_classes, block=ResNetBasicBlock, deepths=[2, 2, 2, 2])
 
-	def load_model(self):
-		self.load_state_dict(torch.load(self.model_save_path))
 
-	def __get_correct_total(self, preds, labels):
-		return preds.argmax(dim=1).eq(labels).sum().item()
+def resnet34(in_channels, n_classes):
+	return ResNet(in_channels, n_classes, block=ResNetBasicBlock, deepths=[3, 4, 6, 3])
 
-if __name__ == "__main__":
-	dataset = SneakersDataset(os.path.join(IMG_DIR, "Nike"), MODELS);
-	net = Net(MODEL_SAVE_PATH);
-	#net.load_model();
-	print("\nInit training protocol? (y/n)");
-	if input() == "y":
-		net.train(data_set=dataset);
+
+def resnet50(in_channels, n_classes):
+	return ResNet(in_channels, n_classes, block=ResNetBottleNeckBlock, deepths=[3, 4, 6, 3])
+
+
+def resnet101(in_channels, n_classes):
+	return ResNet(in_channels, n_classes, block=ResNetBottleNeckBlock, deepths=[3, 4, 23, 3])
+
+
+def resnet152(in_channels, n_classes):
+	return ResNet(in_channels, n_classes, block=ResNetBottleNeckBlock, deepths=[3, 8, 36, 3])

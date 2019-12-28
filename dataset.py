@@ -1,14 +1,17 @@
-import os;
-import cv2;
-import random;
+import os
+import random
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
-import data_transform;
-import numpy as np;
-import matplotlib.pyplot as plt;
-from PIL import Image;
-from torch.utils.data import Dataset;
-from torchvision import transforms, utils;
-from config import *;
+from PIL import Image
+from torch.utils.data import Dataset
+from torchvision import transforms, utils
+
+import data_transform
+from config import *
+
 
 class SneakersDataset(Dataset):
 	"""Sneakers dataset."""
@@ -30,15 +33,16 @@ class SneakersDataset(Dataset):
 
 	def __getitem__(self, index):
 		image, label = self.image_arr[index];
-		image = self.to_tensor(image);
+		# image = self.to_tensor(image);
 		if self.transform_functions and any(self.transform_functions):
 			for transform in self.transform:
 				transform(image);
 		return (image, label);
 
+
 def select_n_random(dataset, n=100):
 	perm = torch.randperm(len(dataset))
-	return [img for img,_ in dataset[perm][:n]], [label for _,label in dataset[perm][:n]];
+	return [img for img, _ in dataset[perm][:n]], [label for _, label in dataset[perm][:n]];
 
 
 if __name__ == "__main__":
