@@ -1,2 +1,6 @@
 # sneaker-recognition-ai
-Deep machine learning neural network for sneaker recognition
+Deep machine learning convolution neural network for sneaker recognition based on ResNet architecture. 
+
+![Predictions](https://github.com/timoth-y/sneaker-recognition-ai/blob/master/predictions.png)
+
+![Feature map](https://github.com/timoth-y/sneaker-recognition-ai/blob/master/net-vision-map.png)
